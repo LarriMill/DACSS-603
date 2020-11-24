@@ -1,0 +1,126 @@
+---
+title: "HW 8"
+author: "Larri Miller"
+date: "due 11/14/2020"
+output: pdf_document
+---
+Worked with Grace
+
+# WIND TURBINES 
+
+``` {r}
+library(tidyverse)
+stokes <- read.csv("stokes_merged.csv") 
+````
+
+## Question 5  (SAVE FOR NEXT HOMEWORK)
+
+What is the standard error of the coefficient for `prop`?  What is the value of the estimate divided by the standard error and what does that mean?  If you have the null hypothesis that this coefficient is equal to 0 and choose $\alpha = 0.05$ level, would you reject the null hypothesis?  What does rejecting the null hypothesis mean substantively in this case?
+
+
+## Answer 5 
+
+```{r, eval=TRUE} 
+
+
+fit <- lm(perc_lib ~ prop + factor(master_id) + factor(year),
+          data = stokes)
+summary(fit)$coef["prop",]
+
+
+```
+
+The standard error of the prop coefficient is 0.01764. The value of the estimate divided by the standard error is the t-value, which is calculated to be -3.618. A t-value of 0 would indicate that the sample results equal the null hypothesis. In this case, the null hypothesis would be that there would be no difference in support for the liberal party based on a windfarm proposal in the precinct. As the difference between the sample data and the null hypothesis increases, the absolute value of the t value increases. Because the t value here is -3.618, we can conclude that there is a substantial negative difference in support for the liberal party based on proposed windfarms.
+
+
+## (b) Provide a 95% confidence interval on the coefficient for prop. What is the relationship between what you are doing here and what you did in (a) above?
+```{r}
+p <- -0.06382 # prop coeff value provided in summary
+se <- 0.01764 # standard error provided in summary
+
+lower.ci.95 <- p - 1.96*se
+upper.ci.95 <- p + 1.96*se
+```
+The confidence interval on the prop coefficient is (`r lower.ci.95` , `r upper.ci.95`), which indicates that the prop coefficient can be found between these values 95% of the time. In (a), we were hypothesis testing, or looking to see if we should reject the null hypothesis based on the t value. We can also reject the null hypothesis if the t value falls outside of the confidence interval provided here. 
+
+## (c) What is the lowest significance level at which you could reject the null hypothesis that the coefficient equals 0? What special name is there for this significance level?
+
+The lowest significance level at which the null hypothesis can be rejected is 0.01, called significance alpha.
+
+
+# CRIMINAL RECORDS
+## Question 5  (SAVE THIS FOR NEXT HOMEWORK)
+``` {r}
+audit <- read.csv("criminalrecord.csv") 
+```
+
+Assuming a null hypothesis that there is no difference in callback rates between white people with a criminal record and white people without a criminal record, what is the probability that we would observe a difference as large or larger than the one that we observed in a sample of this size?  
+
+## Answer 5
+
+```{r}
+# callbacks
+white <- subset(audit, black==0)
+callback.white.crime <- mean(white[white$crimrec==1, "callback"])
+callback.white.nocrime <- mean(white[white$crimrec==0, "callback"])
+
+
+#following Adam's Z score suggestion
+diff <- callback.white.crime - callback.white.nocrime
+SEdiff <- sqrt((callback.white.crime*(1-callback.white.crime)/150) + 
+                 (callback.white.nocrime*(1-callback.white.nocrime)/150))
+Z <- diff/SEdiff
+
+p <- pnorm(Z)
+```
+The probability that we would observe a difference as large or larger than the one that we observed in a sample of this size is `r p`.
+
+
+## Question 6  Imagine that we set up a hypothesis test where the null hypothesis is that there is no difference in callback rates between whites with and without a criminal record.  In the context of this problem, what would it mean to commit a type I error?  In the context of this problem, what would it mean to commit a type II error?  If we set $\alpha = 0.05$ for a two-tailed test are we specifying the probability of type I error or type II error?
+
+## Answer 6
+A type I error is when the the null hypothesis is rejected despite being true. In the context of this problem, the alternate hypothesis is that there is a difference in callback rates between whites with and without a criminal record. If a type I error occurs, this would mean that one assumes there is a difference based on criminal record when in fact there is not. 
+
+A type II error is when the null hypothesis is accepted when it should be rejected. In the context of this problem, that would be if one assumes that there is no callback difference in whites with or without criminal records, when in fact there is.
+
+Setting $\alpha = 0.05$ within a two-tailed test means that the alpha is split between the upper and lower tails, or that the statistical significance is 0.025 in either direction. A two-tailed test is able to distinguish mean values to either side of the x value, which represents the null hypothesis, meaning that it would be able to catch a type II error.
+
+
+
+## 3. Confidence Intervals vs. NHST. What are the advantages of focusing on confidence intervals rather than tests of statistical significance? Does a hypothesis testing offer any advantages over a confidence interval approach?
+
+
+## Answer 3.
+Confidence intervals provide more information than NHSTs do. In an NHST,the null hypothesis is either rejected or not, which doesn't give much further insight than that single conclusion. A confidence interval provides a range of plausible values and can describe the magnitude of an effect. An NHST is an advantage if one wants a clear cut rejection of a null hypothesis, but it doesn't give much clarity beyond that.
+
+
+## 4. Chi-squared Test of Independence (Association). In a recent poll of Latino Registered Voters, 200 such voters were surveyed in each of five states with large Latino populations: Arizona, California, Colorado, Florida, Texas (1000 in all, equally split across the five states). When asked about their intention to vote in the presidential election,  here's how they responded: For the purposes of this question, combine the last three categories into one (50-50, probably, or certainly will not vote). Ignore the national column and test whether Latino/a intention to vote is independent of state for those in the these five states. 
+
+``` {r}
+survey <- matrix(c(24, 136, 22, 18, 32, 132, 19, 17, 18, 150, 13, 19, 28, 146, 9, 17, 22, 138, 22, 18), nrow = 4, ncol = 5)
+
+chisq.test(survey)
+```
+
+## a) What is the null hypothesis?
+The null hypothesis is that Latino/a intention to vote is independent of state.
+
+
+## b) What is the alternative hypothesis? 
+The alternative hypothesis is that Latino/a intention to vote is associated with the state.
+
+
+## c) What are the degrees of freedom?
+df = (r - 1)(c - 1) = (4 - 1)(5 - 1) = (3)(4) = 12.
+
+## d) What is the chi-squared test statistic associated with your test of association vs. independence? For 0.05 significance level, would you reject the null hypothesis? 
+```{r}
+qchisq(0.95, df=12)
+```
+
+The x-squared value is 14.311. Because this test value is less than the critical value shown above, the null hypothesis should not be rejected.
+
+## e) What is the p-value and what does it mean?
+The p value is 0.2813. This value is far above 0.05 which means that the null hypothesis should not be rejected. Thus, this chi-squared test shows that the Latino/a intention to vote is independent of that individual's state.
+
+

@@ -1,0 +1,162 @@
+---
+title: "Co-ethnic Candidates and Voter Turnout"
+subtitle: "Larri Miller"
+output: pdf_document
+---
+  
+For this problem set, we will analyze data from the following article:
+
+Fraga, Bernard. (2015) ["Candidates or Districts? Reevaluating the Role of Race in Voter Turnout,"](http://dx.doi.org/10.1111/ajps.12172) *American Journal of Political Science*, Vol. 60, No. 1, pp. 97--122.
+
+Fraga assesses the theory that minority voters are more likely to vote in elections featuring co-ethnic candidates. He shows that the association between minority voter turnout and co-ethnic candidates disappears once we take into account district-level racial composition. In particular, he demonstrates that in districts where blacks make up a greater share of the voting-age population, blacks in that district are more likely to vote in elections *regardless* of candidate race. Although the main analyses he carries out are a bit more complicated than what we cover in *QSS*, we can replicate his substantive findings using the multiple regression approach we've learned. 
+
+A description of the variables is listed below:
+
+--------------------------------------------------------------------------------
+Name                Description
+------------------- ------------------------------------------------------------
+`year`              Year the election was held
+
+`state`             State in which the election was held
+
+`district`          District in which the election was held (unique within state but not across states)
+
+`turnout`           The proportion of the black voting-age population in a district that votes in the general election
+
+`CVAP`              The proportion of a district's voting-age population that is black
+
+`candidate`         Binary variable coded "1" when the election includes a black candidate; "0" when the election does not include a black candidate
+
+--------------------------------------------------------------------------------
+```{r}
+library(tidyverse)
+blackturnout <- read.csv("blackturnout.csv")
+```
+## Question 1
+
+Fraga analyzes turnout data for four different racial and ethnic groups, but for this analysis we will focus on the data for black voters. Load  `blackturnout.csv`. Which years are included in the dataset?  How many different states are included in the dataset? 
+
+## Answer 1
+
+```{r}
+## R CODE USED TO DO DATA ANALYSIS IN ORDER TO ANSWER THIS QUESTION
+(unique(blackturnout$year))
+numState <- length(unique(blackturnout$state))
+```
+This dataset includes the years 2008, 2010, and 2006, as well as `r numState` different states.
+
+## Question 2
+
+Create a boxplot that compares turnout in elections with and without a co-ethnic candidate.  Be sure to use informative labels.  Interpret the resulting graph.
+
+
+## Answer 2
+```{r}
+## R CODE USED TO DO DATA ANALYSIS IN ORDER TO ANSWER THIS QUESTION
+
+# creating a new variable that renames candidate ethnicity
+blackturnout <- blackturnout %>%
+  mutate(candidateRename = recode(candidate, `1` = "co-ethnic", `0` = "not co-ethnic"))
+
+boxplot(turnout ~ candidateRename, data = blackturnout,
+        main = "Black voter turnout by candidate ethnicity",
+        ylab = "Turnout",
+        xlab = "Candidate ethnicity")
+
+
+```
+Based on the mean values, it appears that a co-ethnic candidate leads to slightly greater Black turnout. However, there are outliers for non co-ethnic candidates which show greater turnout rates than co-ethnic candidates experience. Because the means look so close, it seems that there may be more nuance to black voter turnout than candidate coethnicity. 
+
+## Question 3
+
+Run a linear regression with black turnout as your outcome variable and candidate co-ethnicity as your predictor. Report the coefficient on your predictor and the intercept. Interpret these coefficients. Do not merely comment on the direction of the association (i.e., whether the slope is positive or negative). Explain what the value of the coefficients mean in terms of the units in which each variable is measured.  Based on these coefficients, what would you conclude about blacks voter turnout and co-ethnic candidates?
+
+## Answer 3
+```{r}
+## R CODE USED TO DO DATA ANALYSIS IN ORDER TO ANSWER THIS QUESTION
+turnoutCandidateReg <- lm(blackturnout$turnout ~ blackturnout$candidate)
+turnoutCandidateReg
+```
+The intercept is 39.4% and the candidate coefficient is 6.2%.
+
+Based on the intercept and Fraga's assumptions, it is expected that Black turnout would be ~ 39% for an election with a non co-ethnic candidate, and that this turnout will increase by ~ 6% for a co-ethnic candidate. Thus, this model would conclude that a co-ethnic candidate results in higher Black voter turnout.
+
+## Question 4
+
+You decide to investigate the results of the previous question a bit more carefully because the elections with co-ethnic candidates may differ from the elections without co-ethnic candidates in other ways.  Create a scatter plot where the x-axis is the proportion of co-ethnic voting-age population and the y-axis is black voter turnout. Color your points according to candidate co-ethnicity. That is, make the points for elections featuring co-ethnic candidates one color, and make the points for elections featuring no co-ethnic candidates a different color. Interpret the graph.
+
+## Answer 4
+
+```{r}
+## R CODE USED TO DO DATA ANALYSIS IN ORDER TO ANSWER THIS QUESTION
+ggplot(data = blackturnout) +
+  geom_point(mapping = aes(x = CVAP, y = turnout, 
+                           color = candidateRename)) +
+  labs (
+    title = "Co-ethnic voting age population by black voter turnout",
+    x = "Co-ethnic voting age population",
+    y = "Black voter turnout",
+    color = "Candidate"
+  )
+```
+Black voter turnout looks relatively evenly distributed, but the ethnicity of candidates is not; non-Black candidates are largely clustered in areas with lower Black voting age population and Black candidates occur more in areas with high Black voting age population. This helps provide some more context to the earlier boxplot conclusion. While Black voters are slightly more likely (on average) to vote for coethnic candidates, it also seems reasonable to conclude that these Black candidates are more likely to happen in areas with a higher population of voting age Black people.
+
+## Question 5
+
+Run a linear regression with black turnout as your outcome variable and with candidate co-ethnicity and co-ethnic voting-age population as your predictors.  Report the coefficients, including the intercept.  Interpret the coefficients on the two predictors, ignoring the intercept for now (you will interpret the intercept in the next question). Explain what each coefficient represents in terms of the units of the relevant variables.
+
+## Answer 5
+
+```{r}
+## R CODE USED TO DO DATA ANALYSIS IN ORDER TO ANSWER THIS QUESTION
+
+turnoutCandidateCVAP <- lm(turnout ~ candidate + CVAP, data = blackturnout)
+turnoutCandidateCVAP
+```
+The coefficient for candidate is -0.7% and the coefficient for CVAP is 20.7%.
+
+Each of the coefficients explain how much change is expected in Black voter turnout based on that variable, assuming the other is 0. For candidate, the value is the percentage change we would expect in Black voter turnout if CVAP is 0. In this case, we would expect turnout to ever so slightly decrease by -0.7% for a co-ethnic candidate, which is different from the previous regression's prediction.
+
+For CVAP, the value is the percentage change we would expect in Black voter turnout for each percentage of the voting age population that is Black. In this case, we would expect turnout to increase by 20.7% for every unit increase in Black voting age populaiton. 
+
+Looking at the two coefficients, CVAP clearly has a larger impact, meaning that increased Black voter turnout is due to districts with a higher black population, rather than the co-ethnicity of a candidate. When considering the previous scatterplot, this makes sense, as we do not see a large difference in turnout for black vs. non-black candidates. 
+
+## Question 6
+
+Now interpret the intercept from the regression model with two predictors. Is this intercept a substantively important or interesting quantity?  Why or why not? 
+
+## Answer 6
+The intercept for this model is the predicted Black voter turnout calculated with the assumption that both x values (CVAP and candidate) are 0. A 37.5% Black voter turnout in an area with no Black voting age population, however, would not make sense, so the intercept value itself is not substantively important.
+
+## Question 7
+
+Based on the regression model with one predictor, what do you conclude about the relationship between co-ethnic candidates and black voter turnout?  Based on the regression model with two predictors, what do you conclude about the relationship between co-ethnic candidates and black voter turnout?  Please ignore issues of statistical significance for this question given that it will be covered in Chapter 7 of *QSS*.
+
+## Answer 7
+Based on the regression model with one predictor, I would conclude that the coethnicity of a candidate has a positive impact on Black voter turnout. However, based on the regression model with two predictors, I would conclude that candidate coethnicity is not that impactful, and that the voting age Black population is actually more important for Black voter turnout.
+
+Overall, when looking at the means from the boxplot, it seems that Black voter turnout only has a slight edge for coethnic candidates. The scatter plot shows that the main difference in candidate co-ethnicity isn't in turnout, but that a co-ethnic candidate is more likely to come from an area with a higher Black voting age population. When considering the multiple regression, again, the voting age population has the most impact on turnout. It may be that in areas with a high Black voting age population, Black voters may feel that they are able to more effectively vote for candidates that actually represent them (coethnic or not), thus resulting in greater turnout.
+
+
+
+#Statistical Models and Shoe Leather
+
+
+## Question 1
+How does Freedman think regression should and perhaps should not be used?
+
+## Answer 1
+Freedman labels his views on regression as between "Regression sometimes works in the hands of skillful practioners, but it isn't suitable for routine use" and "Regression might work, but it hasn't yet (p. 292)." He states that "with multidimensional data sets, regression may provide helpful summaries of the data (p. 292)." He does not think that regression can be used for causal work because the model is dependent on knowledge that one does not already have about the problem they are studying (p. 304). 
+
+## Question 2
+What does Freedman mean in claiming that "regression models make it all too easy to substitute technique for work"?
+
+## Answer 2
+Freedman believes that too many studies or theories are based on statistical significance and models rather than logic and carefully designed experiments, controls, tools, etc. Snow, whose argument Freedman praises as using "logic and shoe leather (p. 300)," found a natural experiment and collected data, whereas Kanarek (who Freedman criticizes), used a model to create proxies and covariates. It is far easier to statistically manipulate a model than it is to carefully examine a problem from all angles and develop a carefully thought out experiment. Essentially, Freedman thinks that too much weight (heh) is placed on statistics rather than solid theory. 
+
+## Question 3
+What is the potential benefit of imagining empirical social research as detective work rather than science?
+
+## Answer 3
+Freedman admires Snow because he poked around and actually measured data rather than creating a model to make predictions with. In this way, it seems that approaching social science as detective work would be to carefully consider theory and what is actually happening in the world instead of creating a model that could explain hypotheticals. Detective work, in this case, feels like much more work should be placed on understanding the "why" of things happening, rather than "well this is statistically significant" or otherwise using stats as an output and allowing the process itself to be a black box.
+

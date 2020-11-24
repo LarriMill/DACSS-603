@@ -1,0 +1,157 @@
+---
+title: "Miller_Larri_HW3"
+author: "Larri Miller"
+date: "due 9/25/2020"
+output: pdf_document
+---
+# 4.5.1 Prediction Based on Betting Markets (#1, 2, 3, 5. 4 is bonus. Omit 6)
+```{r}
+library(tidyverse)
+intrade12 <- read.csv("intrade12.csv")
+intrade08 <- read.csv("intrade08.csv")
+pres08 <- read.csv("pres08.csv")
+pres12 <- read.csv("pres12.csv")
+polls08 <- read.csv("polls08.csv")
+```
+
+## 1. We will begin by using the market prices on the day before the election to predict the 2008 election outcome. To do this, subset the data such that it contains the market information for each state and candidate on the day before the election only. Note that in 2008, Election Day was November 4.
+```{r}
+# merging the two data frames
+nov3_08 <- merge(pres08, intrade08, by = "state")
+
+# subsetting to only the requested date
+nov3_08 <- nov3_08 %>%
+  subset(day == "2008-11-03")
+```
+
+## We compare the closing prices for the two candidates in a given state and classify a candidate whose contract has a higher price as the predicted winner of that state.
+```{r}
+# making a new variable where 1 indicates a projected Dem win, 0 a projected Rep win
+nov3_08 <- nov3_08 %>%
+  mutate(inPredict = ifelse(PriceR < PriceD, 1, 0))
+```
+
+## Which states were misclassified? How does this compare to the classification by polls presented earlier in this chapter?
+```{r}
+# using the same method as above to recode the pres08 states data into a variable representing who had more popular votes
+nov3_08 <- nov3_08 %>%
+  mutate(win = ifelse(Obama > McCain, 1, 0))
+
+# creating a new variable to compare inTrade's predictions & the actual results
+nov3_08 <- nov3_08 %>%
+  mutate(correct = ifelse(inPredict == win, TRUE, FALSE))
+
+# now printing any states for which the correct variable = FALSE
+print(nov3_08$state.name[nov3_08$correct == "FALSE"])
+```
+Indiana and Missouri are the two states that the Intrade misclassified. In the chapter, (p. 136) these two state polls were called wrong, as well as North Carolina; thus, Intrade predicted fewer wrong than the state polls did.
+
+## Repeat the same analysis for the 2012 election, which was held on Nov 6. How well did the prediction market do in 2012 compared to 2008?
+```{r}
+# copying the code above, changing from 08 to 12
+nov5_12 <- merge(pres12, intrade12, by = "state")
+nov5_12 <- nov5_12 %>%
+  subset(day == "2012-11-05") %>%
+  mutate(inPredict = ifelse(PriceR < PriceD, 1, 0)) %>%
+  mutate(win = ifelse(Obama > Romney, 1, 0)) %>%
+  mutate(correct = ifelse(inPredict == win, TRUE, FALSE))
+
+print(nov5_12$state[nov5_12$correct == "FALSE"])
+```
+Because the prompt states to "assume Intrade predictions would have been accurate" for the states with missing values, the NA values printed above can be ignored. The only state that was predicted incorrectly in 2012 was Florida. In 2012 the Intrade predictions were slightly more accurate, as they only were wrong for one state as opposed to 3 states in 2008.
+
+## 2. How do the predictions based on the betting markets change over time? Implement the same classification procedure as above on each of the last 90 days of the 2008 campaign rather than just the day before the election.
+```{r}
+# inspired by the code posted by Adam on piazza under "Loops (but on Question 2)"
+last08 <- merge(pres08, intrade08, by = "state")
+last08$day <- as.Date(last08$day)
+last08$daysToElect <- as.Date("2008-11-4")-last08$day
+ObamaEV08Predict <- McCainEV08Predict <- rep(NA, 90)
+  for(i in 1:90){
+    day.data <- subset(last08, subset = (daysToElect == i))
+      Obama08States <- (day.data$PriceD > day.data$PriceR)
+      ObamaEV08Predict[i] <- sum(day.data$EV[which(Obama08States == TRUE)])
+    McCainEV08Predict[i] <- 538 - ObamaEV08Predict[i]
+  }
+```
+
+## Plot the predicted number of electoral votes for the Democratic party nominee over this 90-day period. The resulting plot should also indicate the actual election result. Note that in 2008, Obama won 365 electoral votes.
+
+```{r}
+# referencing Justin & Ian's response on the "Graphing Question" in Piazza as well as Adam's initial code
+plot(1:90, ObamaEV08Predict, type = "b", xlim = c(90, 0), ylim = c(200, 400), col = "blue", xlab = "Days to Election", ylab = "Electoral Votes for Candidate")
+
+# indicate election day votes
+points(0, 365, pch = 19, col = "blue")
+abline(v = 0)
+
+```
+
+## Briefly comment on the plot.
+The data seems to be broken into three stages: from > 80 - around 60 days before the election Obama hovers around 300 predicted electoral votes, from ~ 60 to 40 days before he dips to under 200 and then steadily increases to ~ 30, and then from ~ 40 days out to the election the predicted electoral votes stays around 350-360, ending in 365 total electoral votes. It seems that there's more uncertainty in the data from around two months to the election, but by the time there's only a month or so to the election (and, presumably, after the debates) the electoral vote predictions are able to stabilize.
+
+## 3. Repeat the previous exercise but this time use the seven-day morning-average price, instead of the daily price, for each candidate within a state
+```{r}
+# code provided by Adam based on office hours
+total08 <- merge(pres08, intrade08, by = "state")
+total08$day <- as.Date(total08$day)
+total08$daysToElect <- as.Date("2008-11-4")-total08$day
+
+total08$DRdiff <- total08$PriceD - total08$PriceR
+WeekObama <- WeekMcCain <- rep(NA, 90)
+for (i in 1:90){
+  week <- subset(total08, subset = ((daysToElect <= (90 - i + 7)) & (daysToElect > (90 - i))))
+  ObamaStates<- tapply(week$DRdiff, week$state, mean) > 0
+  WeekObama[i] <- sum(ObamaStates*(week$EV[seq(1, (7*51), by = 7)]))
+WeekMcCain[i] <- 538 - WeekObama[i]
+}
+# plot
+plot(90:1, WeekObama, type = "b", xlim = c(90,0), ylim = c(120, 400), col = "blue", xlab = "Days to Election", ylab = "Electoral Votes for Candidate")
+
+# indicate election day votes
+points(0, 365, pch = 19, col = "blue")
+abline(v = 0)
+```
+The same pattern discussed in the previous question seems to be present in the 7-day morning average trend as well. This line overall seems smoother, which makes sense considering that outlier days (like the one that occurs around day 55 in the previous graph) get averaged into the rest of the fold. 
+
+## 5. What is the relationship between the price margins of the Intrade market and the actual margin of victory? Using the market data from the day before the election in 2008 only, regress Obama's actual margin of victory in each state on Obama's price margin from the Intrade markets.
+```{r}
+nov3_08$ActualMargin <- (nov3_08$Obama - nov3_08$McCain)
+nov3_08$TradeMargin <- (nov3_08$PriceD - nov3_08$PriceR)
+
+#plot 
+plot(nov3_08$TradeMargin, nov3_08$ActualMargin, pch = 16,
+     main = "Market-Electoral Regression",
+     xlab = "Market Margin",
+     ylab = "Electoral Margin")
+
+ObamaRegress <- lm(nov3_08$ActualMargin ~ nov3_08$TradeMargin)
+abline(ObamaRegress)
+
+```
+Printing regression coefficients & corrrelation value
+```{r}
+ObamaRegress
+cor(nov3_08$ActualMargin, nov3_08$TradeMargin)
+```
+Based on the correlation value of 0.85 and the scatter plot, the relationship between the intrade market and actual election results is strong. My guess is the outliers-- seen at the lower and upper ends of the x axis-- are based on states that are solidly blue or solidly red, where it would make sense to bet for a candidate that might not win the country overall but would definitely win that individual state.
+
+## Similarly, in a separate analysis, regress Obama's actual margin of victory on Obama's predicted margin from the latest polls within each state.
+
+CODE FOR THE SECOND PART OF Q5 FOUND IN SEPARATE DOC BECAUSE I CANNOT GET IT TO PRINT TO RMARKDOWN :(
+
+## Interpret the results of these regressions.
+The correlation between actual margin of victory and predicted margin of victory has a correlation of 0.96, which is certainly stronger than the 0.85 market-election correlation in the previous part of the q. However, this does not mean that using the markets as predictors are wrong-- as shown in Q1, the markets actually predicted more states accurately than the state predictors did.
+
+# RaOS Discussion
+## 1. Gelman et al. (2021; ch. 1, p. 5) list what they view as four of the most important uses of regression. Order these four from easiest to hardest according to your initial reaction on how well-suited you think linear regression is likely to be for each task (or how regularly you would anticipate that a collected dataset will be suitable for each of these aims of regression in  practice). 
+1. Associations: Based on the description, associations seem to be the easiest to me because it doesn't seem to require much beyond having variables you want to plot against each other.
+2. Prediction: Again, based on the description given by Gelman et al. it seems like prediction is only one step above associations.
+3. Extrapolation: This seems a step above the rest because it requires adjustment to the data rather than just exploring it or using a pre-existing model to predict something new.
+4. Causal inference: extrapolation and causal inference seem similarly difficult to me because they both require making some sort of an adjustment. Causal seems more difficult to me because it requires that the different groups of data has been treated similarly in order to ensure that effects are causal rather than correlation due to an unknown variable.
+
+## 2. Why do Gelman et al. (2021; 6.3) argue that regression coefficients should be interpreted as "comparisons" rather than "effects"? What do you think the implications would be if we move away from the common language of "effects" when referring to coefficients in this way?
+The term "effect" makes it seem like a regression represents independent and dependent variables, which is not always the case. Gelman et al. use the example of height; the observed pattern is that taller people have higher earnings on average, but this does not mean that me growing one inch will magically make me richer (I wish). The word effect makes it seem like x (height) has a direct impact on y (income), when realistically the relationship between height and income is correlational and likely based on extraneous variables such as competence, age perception, etc. I think that being more careful with the use of the word "effect" would make coefficients more understandable, because when I think "effect" I immediately think of the verb affect (i.e. direct action taken by x on y).
+
+## 3. Explain the meaning of the line graphed in Figure 7.2 of Gelman et al. (2021; ch. 7, p. 94). Explain in words what y = 46.3 + 3.0x is communicating in the contest of the question being investigated.
+This model is showing the average recent growth in personal income (x) versus an incumbent party's vote share (y). The value 46.3 represents an incumbent party's vote share if x = 0, or economic growth is equivalent to zero. For every amount of economic growth (x), the incumbent party's growth share is expected to increase by 3%. For example, if there was no economic growth, the incumbent is expected to receive 46.3% of their incumbent party growth share; if the economic growth is a value of 3, they are expected to receive 9% more votes than that baseline, or 55.3% total.

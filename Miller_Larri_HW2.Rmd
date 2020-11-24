@@ -1,0 +1,252 @@
+---
+title: "Miller_Larri_HW2"
+author: "Larri Miller"
+date: "due 9/11/2020 (turning in late due to internet access issues)"
+output: pdf_document
+---
+For this HW I referenced both Maddi & Tyler's code posted on RStudio Cloud, as well as Adam & Maddi's Q4 questions & Jaeye's suggested code. 
+
+# A. 3.9.2 Political Efficacy in China and Mexico
+```{r setup, include=FALSE}
+library(tidyverse)
+vignettes <- read.csv("vignettes.csv")
+```
+
+## 1. Plot the distribution of responses separately for China and Mexico using bar plots, where the vertical axis is the proportion of respondants.
+
+```{r}
+# recoding the self & china variables to be used in the graph
+vignettes <- vignettes %>%
+  mutate(self_response = recode_factor(self, `1` = "No say at all", `2` = "Little say", `3` = "Some say", `4` = "A lot of say",`5` = "Unlimited Say"),
+         country = recode_factor(china, `0` = "Mexico", `1` = "China"))
+```
+
+Mexico
+```{r}
+# I just want to use Mexico's data, so I'm creating the mexico variable to contain that subset of data.
+mexico <- subset(vignettes, subset = (country == "Mexico"))
+
+# Creating the prop table
+mexico_ptable <- prop.table(table(mexico$self_response))
+
+# Creating the bar graph
+barplot(mexico_ptable,
+        main = "Political Efficacy Ratings in Mexico",
+        xlab = "Response Category",
+        ylab = "Proportion of the respondents") 
+```
+China 
+```{r}
+# I just want to use China's data, so I'm creating the china variable to contain that subset of data.
+china <- subset(vignettes, subset = (country == "China"))
+
+# Creating the prop table
+china_ptable <- prop.table(table(china$self_response))
+
+# Creating the bar graph
+barplot(china_ptable,
+        main = "Political Efficacy Ratings in China",
+        xlab = "Response Category",
+        ylab = "Proportion of the respondents") 
+```
+
+## In addition, compute the mean response for each country.
+```{r}
+#I'm using the original self value for the mean calculation rather than the recoded factor value.
+mexico_mean <- mean(mexico$self, na.rm = TRUE)
+china_mean <- mean(china$self, na.rm = TRUE)
+```
+The mean self efficacy response is `r mexico_mean` for Mexico and `r china_mean` for China.
+
+## According to this analysis, which country appears to have a higher degree of political efficacy? 
+Based on the bar graphs and the mean values, it seems that China respondents had a higher degree of political efficacy. 
+
+## How does this evidence match with the fact that in the 2000 election, Mexican citizens voted out of office the ruling Institutional Revolutionary Party (PRI) who had governed the country for more than 80 years, while Chinese citizens have not been able to vote in a fair election to date?
+This data was collected in 2002, which means that it reflects attitudes after the ousting of the PRI in Mexico. Perhaps situations did not change (or got worse) despite the removal of PRI, resulting in people feeling demoralized and like they were unable to enact change via voting. Based on the information provided, there does not seem to be a similar event in China, which could mean that Chinese respondents are accustomed to unfair elections, whereas Mexican respondents were expecting change and received none. 
+
+
+## 2. Create histograms for the age variable seperately for Mexican and Chinese respondents. Add a vertical line representing the median age of the respondents for each country.
+Mexico
+```{r}
+hist(mexico$age, freq = FALSE, xlab = "Age", main = "Distribution of Mexican Respondent Age") 
+abline(v = median(mexico$age), col = "red")
+medianMexico = median(mexico$age)
+```
+China
+```{r}
+hist(china$age, freq = FALSE, xlab = "Age", main = "Distribution of Chinese Respondent Age") 
+abline(v = median(china$age), col = "red")
+medianChina <- median(china$age)
+```
+
+## What differences in age distribution do you observe between the two countries? [Histogram Interpretation]
+Based on the histograms, it looks like the Mexican ages skew to be lower, whereas the Chinese ages look to be a bit more normally curved. The median Mexican age is `r medianMexico` and the median Chinese age is `r medianChina`.
+
+## In addition, use a quantile-quantile plot to compare the two age distributions.
+```{r}
+qqplot(mexico$age, china$age, xlab = "Mexican Respondent Age", ylab = "Chinese Respondent Age", main = "Distribution of Mexican and Chinese Respondent Age")
+abline(0, 1)
+```
+
+## What differences in age distribution do you observe between the two countries? [Q-Q Plot Interpretation]
+The majority of the points are to the left of the 45-degree line, which indicates that the Chinese population is generally older. The Mexican population has a few outliers that are older than anyone in the Chinese population, but overall Chinese respondents are older.
+
+## 3. Compute the proportion of respondents, again separately for China and Mexico, who rank themselves (according to the self-assessment question) as having less say in the government's decisions than Moses (the last vignette).
+Mexico
+```{r}
+# I like Maddi's idea of creating a new variable using an if else statement, so I'm recreating it here.
+mexico <- mexico %>%
+  mutate(lowEfficacy = ifelse(moses > self, 0, 1))
+# creating a p table & corresponding bar plot
+mexico_eff <- prop.table(table(mexico$lowEfficacy))
+barplot(mexico_eff,
+        names.arg = c("Lower Efficacy", "Higher Efficacy"), 
+        main = "Self vs. Moses Political Efficacy in Mexico",
+        xlab = "Self Political Efficacy vs. Moses",
+        ylab = "Proportion of Respondents")
+```
+
+China
+```{r}
+china <- china %>%
+  mutate(lowEfficacy = ifelse(moses > self, 0, 1))
+# creating a p table & corresponding bar plot
+china_eff <- prop.table(table(china$lowEfficacy))
+barplot(china_eff,
+        names.arg = c("Lower Efficacy", "Higher Efficacy"), 
+        main = "Self vs. Moses Political Efficacy in China",
+        xlab = "Self Political Efficacy vs. Moses",
+        ylab = "Proportion of Respondents")
+```
+
+## How does the result of this analysis differ from that of the previous analysis? Give a brief interpretation of the result.
+As shown in the two bar graphs above, more people in Mexico believe themselves to have higher self efficacy than Moses than lower self efficacy; in China, more people believe that that they have lower self efficacy than Moses than higher self efficacy. This is contrary to the previous analysis, in which Mexican respondents had a lower sense of self efficacy than Chinese respondents. A possible explanation of this discrepancy could be based around the norms in each country. As described in the previous question, my theory is that the ousting of the PRI did not result in the changes that Mexican citizens hoped for, resulting in them having a lower perception of efficacy based on that election. However, the comparison to Moses might have shifted the respondent's perspective away from dissatisfaction with the new party performance and towards the fact that they ousted the ruling party.
+
+
+## 4. Create a variable that represents how respondents rate themselves relative to these vignettes. 
+Mexico
+```{r} 
+# For this question I'm referencing the "subsetting on HW 2" piazza discussion. first I'm creating a subset of participants who ranked the vignettes in the expected order
+expectedOrderM <- subset(mexico, alison >= jane & jane >= moses)
+
+#now creating a variable that represents how well respondents rate selves in comparison to each vignette
+selfComparisonM <- 
+  ifelse(expectedOrderM$self >= expectedOrderM$alison, 4,
+         ifelse(expectedOrderM$self >= expectedOrderM$jane, 3,
+                ifelse(expectedOrderM$self >= expectedOrderM$moses, 2, 1)))
+```
+
+## Create the bar plots of this new variable as done in question1. The vertical axis should represent the proportion of respondents for each response category.
+```{r}
+#first creating prop table
+selfCompareM_prop <- prop.table(table(selfComparisonM))
+selfCompareM_prop
+
+#then creating the bar graph
+barplot(selfCompareM_prop,
+        main = "Respondant Self Rankings Compared to Vignettes (Mexico)",
+        xlab = "Comparison category",
+        ylab = "Proportion of Respondents")
+```
+
+China
+
+```{r} 
+expectedOrderC <- subset(china, alison >= jane & jane >= moses)
+
+#now creating a variable that represents how well respondents rate selves in comparison to each vignette
+selfComparisonC <- 
+  ifelse(expectedOrderC$self >= expectedOrderC$alison, 4,
+         ifelse(expectedOrderC$self >= expectedOrderC$jane, 3,
+                ifelse(expectedOrderC$self >= expectedOrderC$moses, 2, 1)))
+```
+
+## Create the bar plots of this new variable as done in question1. The vertical axis should represent the proportion of respondents for each response category.
+```{r}
+#first creating prop table
+selfCompareC_prop <- prop.table(table(selfComparisonC))
+selfCompareC_prop
+
+#then creating the bar graph
+barplot(selfCompareC_prop,
+        main = "Respondant Self Rankings Compared to Vignettes (China)",
+        xlab = "Comparison category",
+        ylab = "Proportion of Respondents")
+```
+
+## Also, compute the mean value of this new variable separately for China and Mexico.
+```{r}
+selfComparisonC_mean <- mean(selfComparisonC, na.rm = TRUE)
+selfComparisonM_mean <- mean(selfComparisonM, na.rm = TRUE)
+```
+
+## Give a brief interpretation of the result by comparing these results with those obtained in question1.
+The mean comparison value for Mexico is `r selfComparisonM_mean` and `r selfComparisonC_mean` for China. These mean values line up with the graphs, as they show respondents in Mexico generally ranking themselves as better off than the vignettes, with the opposite occurring in China. This is different from the results in Q1, as Q1 showed Chinese respondents as having greater self-efficacy than Mexican respondents. However, the results found in this question do align with question3 and my explanation there. 
+
+
+## 5. Answer the previous question separately for those who are 40 years or older and those who are younger than 40 years. 
+``` {r}
+#I'm taking a slightly different approach here and subsetting ages without separating out countries. In retrospect I could have done this earlier, or created a reusable function.
+
+# getting those that answered in expected order
+expectedOrder <- subset(vignettes, alison >= jane & jane >= moses) 
+
+# coding self comparison across all -- using Maddi's technique
+expectedOrder <- expectedOrder%>%
+  mutate(comp = case_when(
+    self >= alison ~ 4,
+    self >= jane ~ 3,
+    self >= moses ~ 2,
+    self < moses ~ 1))
+
+# subsetting based on age
+young <- subset(expectedOrder, age < 40)
+old <- subset(expectedOrder, age >= 40)
+
+#creating prop tables
+young_prop <- prop.table(table(young$country, young$comp))
+old_prop <- prop.table(table(old$country, old$comp))
+
+# creating bar graph
+barplot(young_prop, legend = TRUE, beside = TRUE, 
+        main = "Respondant Self Rankings Compared to Vignettes (under 40)",
+        xlab = "Comparison category",
+        ylab = "Proportion of Respondents")
+
+barplot(old_prop, legend = TRUE, beside = TRUE,
+        main = "Respondant Self Rankings Compared to Vignettes (>= 40)",
+        xlab = "Comparison category",
+        ylab = "Proportion of Respondents")
+```
+For both the under 40 and >= 40 groups, the trend is still that Mexican respondents have a much higher self efficacy comparison than Chinese respondents.
+
+# Does your conclusion for the previous question differ between these two groups of respondents?
+Looking at these two graphs, it still seems that Chinese respondents were more likely to rate themselves as having less self efficacy than Moses and Mexican respondents were more likely to rate themselves as having more self efficacy than Moses, regardless of age. My overarching conclusion does not change.
+
+# B. Conceptual/Theoretical Measurement
+## 1. Is this concept directly observable or latent?
+This concept is latent because tolerance must be operationalized through other signifiers. There is not a particular tool that can directly measure tolerance (such as a thermometer measuring temperature). 
+
+## 2. How would you define this concept of tolerance in brief?
+When considering tolerance towards different religious/spiritual beliefs, I think of willingness to coexist with different religious influences, actions, visuals, etc. For example, one who is more tolerant (using this definition) may be supportive of different religions being taught about in schools, where one who is less tolerant may reject any but their own religion being taught about.
+
+## 3. Describe a survey question or set of survey questions that could be used to measure a respondent's tolerance, defined in this way?
+A Likert scale (Strongly Disagree - Slightly Disagree - Disagree - Neither Disagree or Agree - Slightly Agree - Agree - Strongly Agree) could be used for respondents to rate their stance with the following statements:
+-- I think that my religious/spiritual beliefs(1) should be the only one taught about in schools.
+-- I think that my  religious/spiritual beliefs should be the basis of lawmaking.
+-- I think that religious/spiritual beliefs different from mine should be practiced privately.
+-- I think that religious/spiritual beliefs different from mine should be practiced publicly.(2)
+...
+
+(1) for questions like this, it would be nice to ask the respondent to select/input their religious beliefs and then pipe that text in for each of the questions.
+(2) to get a sense of consistency in answers, it would be good to have questions that essentially say the same thing from opposing perspectives (here, I changed private vs. public) and then reverse coded when necessary.
+
+## 4. What would be the resulting variable used to operationalize this concept of religious tolerance?
+The questions I've created center around approval towards other religious/spiritual beliefs having influence within the public sphere. To use these answers, I would likely split the respondents in half based on the mean into low versus high approval, with the idea that low approval respondents have lower tolerance for religious/spiritual others.
+
+## 5. What would be the shortcomings or limitations of your measurement in getting at the concept of interest?
+As it is, my survey questions are narrow and boil down to "can others practice religion or is mine the only one allowed." Tolerance is likely more nuanced than this-- one can say that they agree with others being allowed to practice their religion/spiritual beliefs publicly, but what it means to practice beliefs publicly may not mean the same thing for everyone; for one person, this question could be interpreted to mean that it's okay to wear a cross necklace and not much else, while for another person it could mean that others can publicly pray, sing, worship, etc. To get at tolerance, it might be useful to use a vignette; as shown in the ch3 HW, using the vignette comparison provided a different perspective than looking at simple means alone. It would be interesting to provide vignettes with people in different religions vs. their own (i.e. ask the participant what their religion/beliefs are, and present them with vignettes using different religions), ask survey questions about participant (dis)approval of the events depicted in the vignette, and compare between the same and different-religion scenarios. 
+
+
+
+

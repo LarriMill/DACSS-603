@@ -1,0 +1,78 @@
+---
+title: "Larri Miller HW 9"
+date: due 11/22/2020
+output: pdf_document
+---
+Worked with Grace for this assignment :)
+
+```{r}
+guns <- read.csv("ANES2012_GunOwnership.csv")
+```
+
+# Q1. Start by fitting a linear probability model, by using lm() in R to run a multiple regression, modeling *ownsgun* as a linear function of all the other variables. 
+```{r}
+model <- lm(ownsgun ~ terrorist_attack + FedGov_threat + torture_suspects + authoritarianism + patriotism + anti_immig + conservatism + religious, data = guns)
+
+summary(model)
+```
+
+## a) Interpret all estimated coefficients, including some characterization of uncertainty via confidence intervals or reference to statistical distinguishability (i.e. 'significance')
+* Terrorist_attack indicates how worried the respondent is that a terrorist attack on U.S. soil will occur within the next 12 months, causing at least 100 casualties, from "not at all worried" (0) to "extremely worried" (4). When predicting gun ownership, the terrorist_attack coefficient is -0.003374, meaning that for each unit increase in fear over a terrorist attack, a respondent is 0.34% less likely to own a gun. This is one of the few coefficients that does not meet even the 0.05 significance threshold at which a null hypothesis is typically rejected. 
+* The FedGovt_threat variable indicates the degree to which the respondent feels the federal government poses a threat to citizens, from none (0) to very/extremely threatening (2). When predicting gun ownership, the FedGovt_threat coefficient is 0.290813, meaning that for each unit increase in belief that the government poses a threat to citizens, an individual is 29% more likely to own a gun. This coefficient has met a significance level *p* < 0.001.
+* torture_suspects gauges support or opposition to the use of torture against suspected terrorists, from strong opposition (1) to strong support (7). When predicting gun ownership, the torture_suspect coefficient is 0.015398, meaning that for every unit increase in support for using torture a respondent is 1.54% more likely to own a gun. This coefficient has met a significance level *p* < 0.001.
+* authoritarianism is a score used to measure support for authoritarianism, from low (0) to high (4). When predicting gun ownership, the authoritarianism coefficient is -0.001730, meaning that for every unit increase in support for authoritarianism a respondent is 0.17% less likely to own a gun. Like terrorist_attack, this coefficient does not meet the 0.05 significance threshold. 
+* Patriotism gauges how important patriotism and patriotic symbols are to the respondent from least (3) to most (14) patriotic. When predicting gun ownership, the patriotism coefficient value is 0.017500, meaning that for every unit increase in patriotism a respondent is 1.8% more likely to own a gun. This coefficient has met a significance level *p* < 0.001.
+* Anti_immigr gauges a respondents attitude towards how punitive US policy towards undocumented immigrants should be, from least (2) to most (9) restrictive/punitive. When predicting gun ownership, the anti_immigr coefficient is 0.024644, meaning that for every unit increase in restrictive policy a respondent is 2.46% more likely to own a gun. This coefficient has met a significance level *p* < 0.001.
+* Conservatism measures a respondent's self assessed ideological identity from very liberal (1) to very conservative (7). When predicting gun ownership, the conservative coefficient value is 0.026447, meaning that for every unit increase in conservatism, a respondent is 2.644% more likely to own a gun. This coefficient has met a significance level *p* < 0.001. 
+* The religious variable indicates if religious practice is important to the respondent (1) or not (0). When predicting gun ownership, the religious coefficient is -0.029891, meaning that one who is religious is 2.99% less likely to own a gun. This coefficient does not meet the 0.05 significance threshold.
+
+## b) What are the shortcomings of this model and any caveats to the resulting discussion, given these limitations?
+The above model only provides significance values, which are typically used in the context of null hypothesis testing. As discussed in HW8, NHST does not give much clarity beyond the rejection of a hypothesis positing 'no change.' Confidence intervals, however, provide a range of plausible values and thus more nuanced information. 
+
+# Q2. Next fit a logistic regression, using glm(..., family = binomial(link = "logit)) to predict *ownsgun* from the other variables.
+```{r}
+logModel <- glm(ownsgun ~ terrorist_attack + FedGov_threat + torture_suspects + authoritarianism + patriotism + anti_immig + conservatism + religious, family = binomial(link = "logit"), data = guns)
+
+summary(logModel)
+```
+
+## a) Provide an approximate 90% confidence interval on the coefficient for *FedGovt_threat* and indicate what the coefficient is explicitly describing.
+```{r}
+x.bar <- 0.290813
+se <- 0.043519
+
+ci90 <- c(x.bar - qnorm(0.95)*se, x.bar + qnorm(0.95)*se)
+```
+The 90% confidence interval for the *FedGovt_threat* coefficient is `r ci90`, which indicates that the coefficient will be found between these values 90% of the time. 
+
+## b) Use the "divide-by-4" rule from chapter 13 of Gelman et al. (RaOs) to interpet the point estimates (best approximations, without interval) for coefficients on *FedGovt_threat*, *patriotism*, *anti_immig*, and *conservatism*. How do these compare to the corresponding coefficient estimates in Q1? Why do you think these are or are not similar?
+```{r}
+fedgov <- 0.290813/4
+patriot <- 0.087976/4
+anti_imm <- 0.116971/4
+conservativ <- 0.127488/4
+```
+The divide by 4 rule indicate the upper bound of the predictive difference of one unit change of x. The new point estimates are as follows: FedGovt_Threat `r fedgov`, patriotism `r patriot`, anti_immig `r anti_imm`, and conservatism `r conservativ`. Each of these values is very similar to the coefficient estimates in Q1. 
+
+
+## c) Suppose you are asked to describe how the probability of gun ownership is predicted to vary as a function of *patriotism*, holding the other explanatory variables at fixed values. How would you answer this question?
+
+
+## d) i. Calculate 90% confidence intervals for model coefficients on the *odds* scale by exponentiating all coefficients (the number e=2.71828 to the power of the coefficient). 
+```{r}
+exp(cbind(OR = coef(logModel), confint(logModel, level = 0.90)))
+```
+### ii. Interpret the point estimate and confidence interval for *patriotism*.
+The patriotism point estimate is 1.09196229 while the confidence interval is (1.06433877, 1.12066547). This means that for every patriotism unit increase, the odds of owning a gun will increase within that interval 90% of the time.
+
+### iii. For those variables that do *not* have a statistically distinguishable relationship (at 0.10 significance level) with gun ownership, what odds ratio falls in the 90% confidence interval, indicating possibly no relationship?
+terrorist_attack, authoritarianism, and religious all did not have a statistically distinguishable relationship with gun ownership, however, all of their odd ratios fall within the 90% confidence intervals.  
+
+# Q3. Suppose you suspect that the relationship between religiosity and gun ownership is different among liberals and conservatives. Describe how you could change the models above to test examine evidence for such a hypothesis. (BONUS: Fit and interpret the model).
+The models could explore if religiosity and gun ownership is impacted by conservatism by using an interaction test, as shown below.
+```{r}
+model3 <- glm(ownsgun ~ religious*conservatism + terrorist_attack + FedGov_threat + torture_suspects + authoritarianism + patriotism + anti_immig, data = guns)
+
+summary(model3)
+```
+The interaction term of conservatism is not significant, as *p* > 0.05. 
