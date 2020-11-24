@@ -1,0 +1,135 @@
+---
+title: "Windpower and NIMBYism"
+output: pdf_document
+author: Larri Miler
+---
+
+This exercise is based on the following article:
+
+Stokes, Leah C. (2016). ["Electoral Backlash against Climate Policy: A Natural Experiment on Retrospective Voting and Local Resistance to Public Policy Authors"](https://doi.org/10.1111/ajps.12220) *American Journal of Political Science*, Vol. 60, No. 4, pp. 958-974.  
+
+The paper explores the period from 2003 to 2011 in Ontario, Canada.  During that time the Liberal Party government passed the Green Energy Act. This policy allowed groups (corporations, communities, and even individuals) to build wind turbines and other renewable energy projects throughout the province.  Further, the government agreed to sign long-term contracts to buy the energy produced by these projects.
+
+Although opinion polls suggest that there was broad support for green energy projects, many voters appeared angry about having a windfarm near them.  That is, many people wanted windfarms, but just not near them.  This is sometimes called NIMBYism (Not In My BackYard).  Stokes's paper investigated whether people near windfarms were more likely to vote against the Liberal Party, which put in place a policy that promoted windfarms.
+
+Here's a partial codebook for the variables in `stokes_electoral_2015.csv`: 
+
+------------------------------------------------------------------------------------
+Name             Description
+---------------  -------------------------------------------------------------------
+`master_id`      Precinct ID number 
+
+`year`           Election year
+
+`prop`           Binary variable indicating whether there was a proposed turbine in that precinct in that year 
+
+`perc_lib`       Votes cast for Liberal Party divided by the number of voters who cast ballots in precinct
+
+------------------------------------------------------------------------------------
+
+Because windfarms were only created in rural parts of Ontario, we are going to restrict the analysis to rural areas; see paper for definition.  Further, we are only going to analyze a random sample of 500 rural precincts for computational reasons. 
+
+Finally, the author assumes that the location of the windfarms was as-if random.  In other words, just like people in a clinical trial are randomly assigned to receive treatment or control, in this case it was as if the windfarms were assigned to precincts without regard to the political attitudes of residents. Under this assumption that windfarm location was unrelated to political preferences, we can give this regression a causal interpretation.
+
+## Question 1
+
+First, let's load the data. What years are included?  How many precincts are included? How many year-precincts are included?
+
+## Answer 1
+
+```{r setup} 
+library(tidyverse)
+##CODE USED FOR THIS ANSWER
+stokes <- read.csv("stokes_merged.csv") 
+
+years <- unique(stokes$year) # what years are included
+precinct <- unique(stokes$master_id) #how many precincts are included
+
+stokes <- stokes %>% # using Ian's code for year-precincts
+  mutate(year_precincts = paste0(year,master_id))
+year_precincts <- unique(stokes$year_precincts)
+```
+
+The years included are `r years`; there are `r length(precinct)` precincts; and `r length(year_precincts)` year-precincts are included.
+
+## Question 2
+
+Make a boxplot that shows the distribution of vote share for the Liberal Party in each year.  What do you conclude from this plot?
+
+## Answer 2
+
+```{r}
+boxplot(perc_lib~year, data=stokes, main="Distribution of Liberal Vote Share Per Year",
+   xlab="Year", ylab="Liberal Vote Share")
+
+```
+
+Based on the boxplot, it appears that the mean value of liberal vote share has decreased over time, from ~0.4 in 2003 to closer to ~0.2 in 2011. Outliers also show a decrease over time, as the highest outlier in 2003 was around 0.8 and in 2011 the highest outlier is closer to 0.6. 
+
+
+## Question 3
+
+Make a timeseries plot that shows the number of precincts with proposed wind farms in each year as well as the number of operational wind farms each year.  What does the plot show?
+
+## Answer 3
+
+```{r}
+## there are many ways to do this. here's one way with a loop
+## ADJUST CODE IF NEEDED TO WORK WITH YOUR DATA
+num.proposed <- rep(NA, 3)
+names(num.proposed) <- c("2003", "2007", "2011")
+num.operational <- rep(NA, 3)
+names(num.operational) <- c("2003", "2007", "2011")
+
+for (loop.year in c("2003", "2007", "2011")) {
+  num.proposed[loop.year] <- sum(stokes$prop == 1 & stokes$year == loop.year)
+  num.operational[loop.year] <- sum(stokes$op == 1 & stokes$year == loop.year)
+}
+
+time.vec <- c(2003, 2007, 2011)
+
+##REMOVE COMMENT #s TO USE CODE BELOW AND SEE OUTPUT
+##AGAIN, ADJUST CODE AS NEEDED GIVEN YOUR ANSWERS TO EARLIER QUESTIONS
+plot(time.vec, num.proposed, 
+     xlab = "Year", 
+     ylab = "Precincts w windfarms", 
+     main = "Windfarms over time",
+     type = "l",  lty = 2,
+     xaxt = "n")
+axis(side = 1, at = c(2003, 2007, 2011))
+lines(time.vec, num.operational, lty = 1)
+legend(2003, 30, 
+       legend = c("Proposed", "Operational"), 
+       lty = c(2, 1))
+```
+
+The plot shows that the number of proposed windfarms over time far exceeds the number of operational windfarms. Starting at 0 in 2003, it was proposed for there to be ~ 10 windfarms by 2007, and > 3x this amount by 2011. However, in 2007 there were still 0 operational windfarms, and this number only raised to between 5-10 in 2011.
+
+
+## Question 4
+
+Now we are going to explore whether districts that had proposed windfarms decreased their support for the Liberal Party.  Run a regression where the outcome is the percentage of votes for the Liberal Party and the predictors are whether a wind farm was proposed.  Your model should also include fixed effects for each precincts and each year (that is, a dummy variable indicating each precinct and another dummy variable for each year).  What is the estimated coefficient on the variable `prop`?  What do you conclude? 
+
+## Answer 4
+
+```{r}
+model <- lm(perc_lib ~ prop + factor(master_id) + factor(year), data = stokes)
+head(lm(model)$coefficients)
+
+```
+
+The estimated coefficient on the prop variable is -0.06382, which can be interpreted to mean that the liberal vote shares for a precinct to be slightly lower if there was a proposed turbine in the precinct that year. 
+
+## Question 5  (SAVE FOR NEXT HOMEWORK)
+
+What is the standard error of the coefficient for `prop`?  What is the value of the estimate divided by the standard error and what does that mean?  If you have the null hypothesis that this coefficient is equal to 0 and choose $\alpha = 0.05$ level, would you reject the null hypothesis?  What does rejecting the null hypothesis mean substantively in this case?
+
+
+## Answer 5 
+
+```{r, eval=TRUE} 
+##SAVE FOR HW 8
+
+```
+
+[REPLACE WITH YOUR OWN ANSWER TO QUESTION 5]
